@@ -1,0 +1,13 @@
+# 开发环境：仅启动 MongoDB（web/server 用 turbo dev 本地运行）
+services:
+  mongo:
+    image: mongo:8.0
+    container_name: monorepo-mongo-dev
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-dev-data:/data/db
+    command: ['mongod', '--bind_ip_all']
+
+volumes:
+  mongo-dev-data:

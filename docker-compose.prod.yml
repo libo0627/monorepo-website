@@ -1,0 +1,50 @@
+# 测试/生产环境部署：MongoDB + 后端 + 前端
+# 用法: docker compose -f docker-compose.prod.yml up -d
+# 环境区分: 通过 --env-file 指定不同的环境变量文件
+#   测试: docker compose -f docker-compose.prod.yml --env-file .env.test up -d
+#   正式: docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+services:
+  mongo:
+    image: mongo:8.0
+    container_name: ${CONTAINER_PREFIX}-mongo
+    restart: always
+    ports:
+      - '${MONGO_PORT:-27017}:27017'
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASS:-example}
+    command: ['mongod', '--auth', '--bind_ip_all']
+
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    container_name: ${CONTAINER_PREFIX}-server
+    restart: always
+    ports:
+      - '${SERVER_PORT:-3001}:3001'
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3001
+      LOG_LEVEL: ${LOG_LEVEL:-warn}
+      MONGODB_URI: mongodb://${MONGO_USER:-root}:${MONGO_PASS:-example}@mongo:27017/${DB_NAME:-monorepo_prod}?authSource=admin
+    depends_on:
+      - mongo
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+    container_name: ${CONTAINER_PREFIX}-web
+    restart: always
+    ports:
+      - '${WEB_PORT:-80}:80'
+    depends_on:
+      - server
+
+volumes:
+  mongo-data:

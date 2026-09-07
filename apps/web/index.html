@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      viewport-fit=cover 用于 iPhone 刘海屏安全区适配。
+      user-scalable=no / maximum-scale=1.0 会禁掉双指缩放，H5 活动页常用，
+      但有可访问性代价。若要允许用户缩放，去掉 user-scalable=no 与 maximum-scale=1.0 即可。
+    -->
+    <meta
+      name="viewport"
+      content="initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0,user-scalable=no,viewport-fit=cover"
+    />
+    <title>Monorepo Demo</title>
+    <script>
+      /**
+       * 移动端 rem 适配（flexible）
+       *
+       * 必须内联在 <head>、且在业务 CSS 之前执行，否则首屏会先按浏览器默认 16px
+       * 渲染、脚本跑完再跳变，出现明显的闪烁。
+       *
+       * 与 vite.config.ts 里 postcss-pxtorem 的约定（改一处必须同步改另一处）：
+       *   设计稿 750 / rootValue 100  =>  rem = 视口宽 / 7.5
+       *
+       * 例：375 的手机，1rem = 50px；设计稿 100px 编译成 1rem，实际渲染 50px（= 100/750*375）。
+       */
+      ;(function flexible(window, document) {
+        var docEl = document.documentElement
+        var dpr = window.devicePixelRatio || 1
+        var tid = null
+
+        function refreshRem() {
+          // 移动端视口上限；超过则按上限算，避免平板上被拉得过大
+          var maxWidth = 1080
+
+          var ua = navigator.userAgent.toLowerCase()
+          var isMobile =
+            ua.indexOf('iphone') > -1 ||
+            ua.indexOf('ipad') > -1 ||
+            ua.indexOf('ipod') > -1 ||
+            ua.indexOf('android') > -1
+
+          // PC（Windows / Mac）上不要铺满全屏，封顶成一个「大号手机」的宽度
+          if (!isMobile && (ua.indexOf('windows') > -1 || ua.indexOf('mac') > -1)) {
+            maxWidth = 300
+          }
+
+          var width = docEl.getBoundingClientRect().width
+          if (width / dpr > maxWidth) {
+            width = maxWidth * dpr
+          }
+
+          // 750 设计稿 / rootValue 100 = 7.5
+          var rem = (width / 7.5).toFixed(1)
+          docEl.style.fontSize = rem + 'px'
+          // 暴露给业务代码做 JS 尺寸换算（如 canvas、滚动容器）
+          window.rem = rem
+        }
+
+        refreshRem()
+
+        // 转屏 / 改窗口大小时重算，防抖 200ms
+        window.addEventListener(
+          'resize',
+          function () {
+            clearTimeout(tid)
+            tid = setTimeout(refreshRem, 200)
+          },
+          false,
+        )
+
+        // 从 bfcache（前进/后退缓存）恢复时重算
+        window.addEventListener('pageshow', function (e) {
+          if (e.persisted) {
+            refreshRem()
+          }
+        })
+
+        // 检测是否支持 0.5px 边框，支持则给 <html> 加 .hairlines，
+        // CSS 里可用 .hairlines & { border-width: 0.5px } 画更细的分割线
+        if (dpr >= 2) {
+          var fakeBody = document.createElement('body')
+          var testElement = document.createElement('div')
+          testElement.style.border = '.5px solid transparent'
+          fakeBody.appendChild(testElement)
+          docEl.appendChild(fakeBody)
+          if (testElement.offsetHeight === 1) {
+            docEl.classList.add('hairlines')
+          }
+          docEl.removeChild(fakeBody)
+        }
+      })(window, document)
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

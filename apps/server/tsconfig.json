@@ -1,0 +1,4 @@
+{
+  "extends": "@mono/config/tsconfig.node.json",
+  "include": ["src", "tsup.config.ts"]
+}

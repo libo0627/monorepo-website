@@ -1,0 +1,10 @@
+{
+  "extends": "@mono/config/tsconfig.web.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "env.d.ts"]
+}
